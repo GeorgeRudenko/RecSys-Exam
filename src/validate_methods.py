@@ -36,14 +36,18 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HIST_POP_WEIGHTS = (0.05, 0.1, 0.15, 0.2, 0.3)
 BLEND_A_GRID = (0.2, 0.4, 0.6)
 BLEND_B_GRID = (0.05, 0.1, 0.2)
+MF_REFINED_A_GRID = (0.1, 0.2, 0.3)
+MF_REFINED_B_GRID = (0.02, 0.05)
 MF_KS = (16, 32, 64)
+N_BOOTSTRAP = 2000
+BOOTSTRAP_SEED = 0
 ATTRIBUTE_FILES = ("export_arh_11-20-final.csv", "export_arh_21-30-final.csv")
 CORE_ATTRIBUTES = {"category", "genre_1", "genre_2", "genre_3", "year"}
 
 
-def load_item_attributes():
+def load_item_attributes(file_names=ATTRIBUTE_FILES):
     frames = []
-    for file_name in ATTRIBUTE_FILES:
+    for file_name in file_names:
         frame = pd.read_csv(
             DATA / file_name,
             usecols=[
@@ -56,6 +60,7 @@ def load_item_attributes():
                 "director",
                 "actors",
             ],
+            low_memory=False,
         )
         frame = frame[frame["tv_show_id"] != 0].copy()
         frames.append(frame)
@@ -219,7 +224,8 @@ def build_tfidf(item_table, actor_tokens):
 
 
 def build_content_scores(
-    interactions, eval_users, pool, item_table, vectors
+    interactions, eval_users, pool, item_table, vectors,
+    weeks=TRAIN_WEEKS
 ):
     n_eval_users = len(eval_users)
     n_items = len(item_table)
@@ -232,7 +238,7 @@ def build_content_scores(
     )
 
     train = interactions[
-        interactions["iso_week"].between(*TRAIN_WEEKS)
+        interactions["iso_week"].between(*weeks)
         & interactions["user_id"].isin(eval_users)
     ].copy()
     train["airing_day"] = train["airing_start"].dt.normalize()
@@ -280,9 +286,9 @@ def build_content_scores(
     return scores, valid, missing_items
 
 
-def build_mf_matrix(interactions):
+def build_mf_matrix(interactions, weeks=TRAIN_WEEKS):
     train = interactions[
-        interactions["iso_week"].between(*TRAIN_WEEKS)
+        interactions["iso_week"].between(*weeks)
     ].copy()
     train["airing_day"] = train["airing_start"].dt.normalize()
     train_days = (
@@ -365,9 +371,9 @@ def build_history_share(
     return share
 
 
-def build_popularity_share(interactions, pool):
+def build_popularity_share(interactions, pool, weeks=POPULARITY_WEEKS):
     recent = interactions[
-        interactions["iso_week"].between(*POPULARITY_WEEKS)
+        interactions["iso_week"].between(*weeks)
     ]
     counts = recent.groupby("tv_show_id")["user_id"].nunique()
     pop_counts = counts.reindex(pool).fillna(0).to_numpy(
@@ -426,6 +432,7 @@ def evaluate_recs(
         "build": build_time,
         "eval": elapsed,
         "runtime": build_time + elapsed,
+        "aps": np.asarray(aps, dtype=np.float64),
     }
 
 
@@ -480,6 +487,63 @@ def best_of(results, prefix):
         if result["method"].startswith(prefix)
     ]
     return max(candidates, key=lambda result: result["map5"])
+
+
+def get_result(results, name):
+    return next(
+        result for result in results if result["method"] == name
+    )
+
+
+def paired_bootstrap(
+    differences, n_resamples=N_BOOTSTRAP, seed=BOOTSTRAP_SEED
+):
+    differences = np.asarray(differences, dtype=np.float64)
+    rng = np.random.default_rng(seed)
+    indices = rng.integers(
+        0,
+        len(differences),
+        size=(n_resamples, len(differences)),
+    )
+    means = differences[indices].mean(axis=1)
+    return (
+        float(differences.mean()),
+        float(np.percentile(means, 2.5)),
+        float(np.percentile(means, 97.5)),
+    )
+
+
+def print_paired_bootstrap(results):
+    comparisons = [
+        (
+            "mf_blend a=0.20 b=0.05 vs hist_pop_w0.30",
+            "blend_mf_k16_a0.20_b0.05",
+            "hist_pop_w0.30",
+        ),
+        ("mf_k16 vs popularity", "mf_k16", "popularity"),
+        (
+            "content_tfidf vs popularity",
+            "content_tfidf",
+            "popularity",
+        ),
+    ]
+    print(
+        "paired bootstrap over evaluated users "
+        f"({N_BOOTSTRAP:,} resamples, seed {BOOTSTRAP_SEED}):"
+    )
+    print(
+        f"{'comparison':<48} {'mean diff':>10} "
+        f"{'95% CI':>24}"
+    )
+    for label, method_name, baseline_name in comparisons:
+        method = get_result(results, method_name)
+        baseline = get_result(results, baseline_name)
+        difference = method["aps"] - baseline["aps"]
+        mean_difference, lower, upper = paired_bootstrap(difference)
+        print(
+            f"{label:<48} {mean_difference:>10.5f} "
+            f"[{lower:>9.5f}, {upper:>9.5f}]"
+        )
 
 
 def main():
@@ -800,12 +864,47 @@ def main():
     print()
     print_results(results)
     print()
-    print(f"total runtime: {time.perf_counter() - total_started:.2f}s")
+    print_paired_bootstrap(results)
+    print()
+
+    refined_results = []
+    for a in MF_REFINED_A_GRID:
+        for b in MF_REFINED_B_GRID:
+            blend_started = time.perf_counter()
+            scores = (
+                a * history_share
+                + b * mf_normalized
+                + (1.0 - a - b) * popularity_share[None, :]
+            )
+            recommendations = topk_recs(scores, pool)
+            blend_build = time.perf_counter() - blend_started
+            refined_results.append(
+                evaluate_recs(
+                    f"blend_mf_k{best_mf_k}_a{a:.2f}_b{b:.2f}",
+                    f"a={a:.2f} b={b:.2f}",
+                    recommendations,
+                    truth,
+                    eval_users,
+                    popularity,
+                    blend_build,
+                )
+            )
+    print(
+        "MF blend refinement "
+        f"(a in {MF_REFINED_A_GRID}, b in {MF_REFINED_B_GRID}):"
+    )
+    print_results(refined_results)
+    print()
 
     best_hist_pop = best_of(results, "hist_pop_")
     best_content_blend = best_of(results, "blend_content_")
-    best_mf_blend = best_of(results, f"blend_mf_k{best_mf_k}_")
-    best_overall = max(results, key=lambda result: result["map5"])
+    best_refined_mf_blend = max(
+        refined_results, key=lambda result: result["map5"]
+    )
+    best_overall = max(
+        results + refined_results,
+        key=lambda result: result["map5"],
+    )
     print(
         f"best hist+pop: {best_hist_pop['method']} "
         f"(MAP@5={best_hist_pop['map5']:.5f})"
@@ -815,12 +914,15 @@ def main():
         f"(MAP@5={best_content_blend['map5']:.5f})"
     )
     print(
-        f"best MF blend: {best_mf_blend['method']} "
-        f"(MAP@5={best_mf_blend['map5']:.5f})"
+        f"best refined MF blend: {best_refined_mf_blend['method']} "
+        f"(MAP@5={best_refined_mf_blend['map5']:.5f})"
     )
     print(
         f"best overall: {best_overall['method']} "
         f"(MAP@5={best_overall['map5']:.5f})"
+    )
+    print(
+        f"total runtime: {time.perf_counter() - total_started:.2f}s"
     )
 
 
