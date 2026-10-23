@@ -41,6 +41,7 @@ MF_REFINED_B_GRID = (0.02, 0.05)
 MF_KS = (16, 32, 64)
 N_BOOTSTRAP = 2000
 BOOTSTRAP_SEED = 0
+RESULTS_DIR = Path("results")
 ATTRIBUTE_FILES = ("export_arh_11-20-final.csv", "export_arh_21-30-final.csv")
 CORE_ATTRIBUTES = {"category", "genre_1", "genre_2", "genre_3", "year"}
 
@@ -513,37 +514,90 @@ def paired_bootstrap(
     )
 
 
-def print_paired_bootstrap(results):
-    comparisons = [
-        (
-            "mf_blend a=0.20 b=0.05 vs hist_pop_w0.30",
-            "blend_mf_k16_a0.20_b0.05",
-            "hist_pop_w0.30",
-        ),
-        ("mf_k16 vs popularity", "mf_k16", "popularity"),
-        (
-            "content_tfidf vs popularity",
-            "content_tfidf",
-            "popularity",
-        ),
-    ]
-    print(
-        "paired bootstrap over evaluated users "
-        f"({N_BOOTSTRAP:,} resamples, seed {BOOTSTRAP_SEED}):"
-    )
-    print(
-        f"{'comparison':<48} {'mean diff':>10} "
-        f"{'95% CI':>24}"
-    )
+def compute_bootstrap_comparisons(results, comparisons):
+    computed = []
     for label, method_name, baseline_name in comparisons:
         method = get_result(results, method_name)
         baseline = get_result(results, baseline_name)
         difference = method["aps"] - baseline["aps"]
         mean_difference, lower, upper = paired_bootstrap(difference)
-        print(
-            f"{label:<48} {mean_difference:>10.5f} "
-            f"[{lower:>9.5f}, {upper:>9.5f}]"
+        computed.append(
+            {
+                "label": label,
+                "method": method_name,
+                "baseline": baseline_name,
+                "mean_diff": mean_difference,
+                "ci_lower": lower,
+                "ci_upper": upper,
+            }
         )
+    return computed
+
+
+def print_bootstrap_comparisons(computed, title):
+    print(title)
+    print(
+        f"{'comparison':<48} {'mean diff':>10} "
+        f"{'95% CI (2.5%, 97.5%)':>28}"
+    )
+    for comparison in computed:
+        print(
+            f"{comparison['label']:<48} "
+            f"{comparison['mean_diff']:>10.5f} "
+            f"[{comparison['ci_lower']:>9.5f}, "
+            f"{comparison['ci_upper']:>9.5f}]"
+        )
+
+
+def save_validation_results(all_results, bootstrap_by_method):
+    rows = []
+    for result in all_results:
+        row = {
+            "method": result["method"],
+            "params": result["params"],
+            "map5": result["map5"],
+            "fill_share": result["fill_share"],
+            "build_seconds": result["build"],
+            "eval_seconds": result["eval"],
+            "runtime_seconds": result["runtime"],
+        }
+        comparisons = bootstrap_by_method.get(result["method"], [])
+        for index, comparison in enumerate(comparisons, start=1):
+            row[f"bootstrap_baseline_{index}"] = comparison["baseline"]
+            row[f"bootstrap_mean_diff_{index}"] = comparison[
+                "mean_diff"
+            ]
+            row[f"bootstrap_ci_lower_{index}"] = comparison["ci_lower"]
+            row[f"bootstrap_ci_upper_{index}"] = comparison["ci_upper"]
+        rows.append(row)
+    columns = [
+        "method",
+        "params",
+        "map5",
+        "fill_share",
+        "build_seconds",
+        "eval_seconds",
+        "runtime_seconds",
+    ]
+    for index in (1, 2):
+        columns.extend(
+            [
+                f"bootstrap_baseline_{index}",
+                f"bootstrap_mean_diff_{index}",
+                f"bootstrap_ci_lower_{index}",
+                f"bootstrap_ci_upper_{index}",
+            ]
+        )
+    frame = pd.DataFrame(rows).reindex(columns=columns)
+    RESULTS_DIR.mkdir(exist_ok=True)
+    path = RESULTS_DIR / "validation.csv"
+    frame.to_csv(
+        path,
+        index=False,
+        lineterminator="\n",
+        float_format="%.5f",
+    )
+    print(f"saved {path} ({len(frame):,} methods)")
 
 
 def main():
@@ -864,7 +918,27 @@ def main():
     print()
     print_results(results)
     print()
-    print_paired_bootstrap(results)
+    requested_comparisons = [
+        (
+            "mf_blend a=0.20 b=0.05 vs hist_pop_w0.30",
+            "blend_mf_k16_a0.20_b0.05",
+            "hist_pop_w0.30",
+        ),
+        ("mf_k16 vs popularity", "mf_k16", "popularity"),
+        (
+            "content_tfidf vs popularity",
+            "content_tfidf",
+            "popularity",
+        ),
+    ]
+    requested_bootstrap = compute_bootstrap_comparisons(
+        results, requested_comparisons
+    )
+    print_bootstrap_comparisons(
+        requested_bootstrap,
+        "paired bootstrap over evaluated users "
+        f"({N_BOOTSTRAP:,} resamples, seed {BOOTSTRAP_SEED}):",
+    )
     print()
 
     refined_results = []
@@ -895,6 +969,43 @@ def main():
     )
     print_results(refined_results)
     print()
+    print("refined grid, b=0.05:")
+    for a in MF_REFINED_A_GRID:
+        result = get_result(
+            refined_results,
+            f"blend_mf_k{best_mf_k}_a{a:.2f}_b0.05",
+        )
+        print(f"  a={a:.2f}  MAP@5={result['map5']:.5f}")
+    print()
+
+    all_results = list(results)
+    seen = {result["method"] for result in all_results}
+    for result in refined_results:
+        if result["method"] not in seen:
+            all_results.append(result)
+            seen.add(result["method"])
+
+    final_comparisons = [
+        (
+            "mf_blend a=0.30 b=0.02 vs hist_pop_w0.30",
+            "blend_mf_k16_a0.30_b0.02",
+            "hist_pop_w0.30",
+        ),
+        (
+            "mf_blend a=0.30 b=0.02 vs popularity",
+            "blend_mf_k16_a0.30_b0.02",
+            "popularity",
+        ),
+    ]
+    final_bootstrap = compute_bootstrap_comparisons(
+        all_results, final_comparisons
+    )
+    print_bootstrap_comparisons(
+        final_bootstrap,
+        "final configuration paired bootstrap "
+        f"({N_BOOTSTRAP:,} resamples, seed {BOOTSTRAP_SEED}):",
+    )
+    print()
 
     best_hist_pop = best_of(results, "hist_pop_")
     best_content_blend = best_of(results, "blend_content_")
@@ -902,7 +1013,7 @@ def main():
         refined_results, key=lambda result: result["map5"]
     )
     best_overall = max(
-        results + refined_results,
+        all_results,
         key=lambda result: result["map5"],
     )
     print(
@@ -921,6 +1032,12 @@ def main():
         f"best overall: {best_overall['method']} "
         f"(MAP@5={best_overall['map5']:.5f})"
     )
+    bootstrap_by_method = {}
+    for comparison in requested_bootstrap + final_bootstrap:
+        bootstrap_by_method.setdefault(
+            comparison["method"], []
+        ).append(comparison)
+    save_validation_results(all_results, bootstrap_by_method)
     print(
         f"total runtime: {time.perf_counter() - total_started:.2f}s"
     )
