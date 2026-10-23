@@ -39,6 +39,24 @@ BLEND_B_GRID = (0.05, 0.1, 0.2)
 MF_REFINED_A_GRID = (0.1, 0.2, 0.3)
 MF_REFINED_B_GRID = (0.02, 0.05)
 MF_KS = (16, 32, 64)
+CHANNEL_HISTORY_WEIGHTS = (0.20, 0.25, 0.30)
+CHANNEL_AFFINITY_WEIGHTS = (0.05, 0.10, 0.15, 0.20)
+CHANNEL_MF_WEIGHT = 0.02
+CHANNEL_BLEND_GRID = tuple(
+    (
+        history_weight,
+        CHANNEL_MF_WEIGHT,
+        channel_weight,
+        1.0 - history_weight - CHANNEL_MF_WEIGHT - channel_weight,
+    )
+    for history_weight in CHANNEL_HISTORY_WEIGHTS
+    for channel_weight in CHANNEL_AFFINITY_WEIGHTS
+) + (
+    (0.30, 0.02, 0.25, 0.43),
+    (0.30, 0.02, 0.30, 0.38),
+    (0.35, 0.02, 0.20, 0.43),
+)
+TARGET_SCHEDULE_FILE = "export_arh_21-30-final.csv"
 N_BOOTSTRAP = 2000
 BOOTSTRAP_SEED = 0
 RESULTS_DIR = Path("results")
@@ -381,6 +399,85 @@ def build_popularity_share(interactions, pool, weeks=POPULARITY_WEEKS):
         dtype=np.float64
     )
     return pop_counts / pop_counts.sum()
+
+
+def load_views():
+    views = pd.read_csv(
+        DATA / "dataset11-30.csv",
+        usecols=["user_id", "vsetv_id", "start_time"],
+        parse_dates=["start_time"],
+    )
+    views.rename(columns={"vsetv_id": "channel_id"}, inplace=True)
+    views["iso_week"] = (
+        views["start_time"].dt.isocalendar().week.astype("int16")
+    )
+    return views
+
+
+def build_channel_affinity(views, users, weeks):
+    subset = views[views["iso_week"].between(*weeks)].copy()
+    subset["view_day"] = subset["start_time"].dt.normalize()
+    counts = (
+        subset.groupby(["user_id", "channel_id"], sort=False)["view_day"]
+        .nunique()
+        .rename("days")
+        .reset_index()
+    )
+    channel_ids = np.sort(counts["channel_id"].unique())
+    channel_index = {
+        int(channel): i for i, channel in enumerate(channel_ids)
+    }
+    user_index = {user: i for i, user in enumerate(users)}
+    counts["user_index"] = counts["user_id"].map(user_index)
+    counts = counts[counts["user_index"].notna()].copy()
+    counts["channel_index"] = counts["channel_id"].map(channel_index)
+    affinity = np.zeros(
+        (len(users), len(channel_ids)), dtype=np.float64
+    )
+    affinity[
+        counts["user_index"].to_numpy(dtype=np.int32),
+        counts["channel_index"].to_numpy(dtype=np.int32),
+    ] = counts["days"].to_numpy(dtype=np.float64)
+    row_sums = affinity.sum(axis=1, keepdims=True)
+    np.divide(affinity, row_sums, out=affinity, where=row_sums > 0)
+    return affinity, channel_index
+
+
+def build_channel_airings(schedule, pool):
+    labelled = schedule[schedule["tv_show_id"] != 0]
+    airings = (
+        labelled.groupby(["tv_show_id", "channel_id"], sort=False)
+        .size()
+        .rename("airings")
+        .reset_index()
+    )
+    pool_index = {int(item): i for i, item in enumerate(pool)}
+    airings["item_index"] = airings["tv_show_id"].map(pool_index)
+    airings = airings[airings["item_index"].notna()].copy()
+    airings["item_index"] = airings["item_index"].astype(np.int32)
+    return airings
+
+
+def build_channel_scores(
+    affinity, channel_index, airings, n_items
+):
+    airings = airings.copy()
+    airings["channel_index"] = airings["channel_id"].map(channel_index)
+    airings = airings[airings["channel_index"].notna()].copy()
+    item_channel = csr_matrix(
+        (
+            np.log1p(airings["airings"].to_numpy(dtype=np.float64)),
+            (
+                airings["item_index"].to_numpy(dtype=np.int32),
+                airings["channel_index"].to_numpy(dtype=np.int32),
+            ),
+        ),
+        shape=(n_items, len(channel_index)),
+        dtype=np.float64,
+    )
+    scores = affinity @ item_channel.T
+    valid = np.any(scores > 0, axis=1)
+    return scores, valid, len(airings)
 
 
 def minmax_rows(scores):
@@ -790,6 +887,46 @@ def main():
             )
         )
 
+    channel_started = time.perf_counter()
+    views = load_views()
+    channel_affinity, channel_index = build_channel_affinity(
+        views, eval_users, TRAIN_WEEKS
+    )
+    channel_schedule = pd.read_csv(
+        DATA / TARGET_SCHEDULE_FILE,
+        usecols=["channel_id", "tv_show_id"],
+    )
+    channel_airings = build_channel_airings(channel_schedule, pool)
+    channel_scores, channel_valid, channel_pairs = build_channel_scores(
+        channel_affinity,
+        channel_index,
+        channel_airings,
+        len(pool),
+    )
+    channel_recommendations = topk_recs(
+        channel_scores, pool, channel_valid
+    )
+    channel_build = time.perf_counter() - channel_started
+    results.append(
+        evaluate_recs(
+            "channel_affinity",
+            "days share; target=21-30",
+            channel_recommendations,
+            truth,
+            eval_users,
+            popularity,
+            channel_build,
+        )
+    )
+    print(
+        f"channel affinity: {len(channel_index):,} channels; "
+        f"{int((channel_affinity.sum(axis=1) > 0).sum()):,} / "
+        f"{len(eval_users):,} eval users with views; "
+        f"{channel_pairs:,} target item-channel pairs; "
+        f"{int((~channel_valid).sum()):,} cold-start users"
+    )
+    del views
+
     content_scores, content_valid, content_missing = (
         build_content_scores(
             interactions,
@@ -876,11 +1013,14 @@ def main():
     print()
 
     normalization_started = time.perf_counter()
+    history_normalized = minmax_rows(history_share)
     content_normalized = minmax_rows(content_scores)
     mf_normalized = minmax_rows(mf_scores[best_mf_k])
+    channel_normalized = minmax_rows(channel_scores)
+    popularity_normalized = minmax_rows(popularity_share[None, :])
     normalization_build = time.perf_counter() - normalization_started
     print(
-        f"min-max normalization for three-part blends: "
+        f"min-max normalization for blends: "
         f"{normalization_build:.2f}s"
     )
 
@@ -978,12 +1118,91 @@ def main():
         print(f"  a={a:.2f}  MAP@5={result['map5']:.5f}")
     print()
 
+    channel_results = []
+    for (
+        history_weight,
+        mf_weight,
+        channel_weight,
+        popularity_weight,
+    ) in CHANNEL_BLEND_GRID:
+        blend_started = time.perf_counter()
+        scores = (
+            history_weight * history_normalized
+            + mf_weight * mf_normalized
+            + channel_weight * channel_normalized
+            + popularity_weight * popularity_normalized
+        )
+        recommendations = topk_recs(scores, pool)
+        blend_build = time.perf_counter() - blend_started
+        channel_results.append(
+            evaluate_recs(
+                f"blend_channel_h{history_weight:.2f}"
+                f"_c{channel_weight:.2f}",
+                f"h={history_weight:.2f} mf={mf_weight:.2f} "
+                f"c={channel_weight:.2f} p={popularity_weight:.2f}",
+                recommendations,
+                truth,
+                eval_users,
+                popularity,
+                blend_build,
+            )
+        )
+    print("channel four-part blend grid:")
+    print_results(channel_results)
+    print()
+
     all_results = list(results)
     seen = {result["method"] for result in all_results}
     for result in refined_results:
         if result["method"] not in seen:
             all_results.append(result)
             seen.add(result["method"])
+    all_results.extend(channel_results)
+
+    best_channel_blend = max(
+        channel_results, key=lambda result: result["map5"]
+    )
+    current_best = get_result(
+        all_results, "blend_mf_k16_a0.30_b0.02"
+    )
+    channel_comparison = [
+        (
+            f"{best_channel_blend['method']} vs current best "
+            "mf_blend a=0.30 b=0.02",
+            best_channel_blend["method"],
+            "blend_mf_k16_a0.30_b0.02",
+        )
+    ]
+    channel_bootstrap = compute_bootstrap_comparisons(
+        all_results, channel_comparison
+    )
+    print_bootstrap_comparisons(
+        channel_bootstrap,
+        "best channel blend vs current best paired bootstrap "
+        f"({N_BOOTSTRAP:,} resamples, seed {BOOTSTRAP_SEED}):",
+    )
+    print()
+    channel_comparison_result = channel_bootstrap[0]
+    channel_wins = (
+        channel_comparison_result["mean_diff"] > 0
+        and channel_comparison_result["ci_lower"] > 0
+    )
+    print(
+        f"best channel blend: {best_channel_blend['method']} "
+        f"(MAP@5={best_channel_blend['map5']:.5f}); "
+        "delta vs current best="
+        f"{best_channel_blend['map5'] - current_best['map5']:+.5f}; "
+        "95% CI="
+        f"[{channel_comparison_result['ci_lower']:.5f}, "
+        f"{channel_comparison_result['ci_upper']:.5f}]; "
+        f"submission={'yes' if channel_wins else 'no'}"
+    )
+    if not channel_wins:
+        print(
+            "no submission written: channel blend does not beat "
+            "the current best with CI above zero"
+        )
+    print()
 
     final_comparisons = [
         (
@@ -1033,7 +1252,9 @@ def main():
         f"(MAP@5={best_overall['map5']:.5f})"
     )
     bootstrap_by_method = {}
-    for comparison in requested_bootstrap + final_bootstrap:
+    for comparison in (
+        requested_bootstrap + final_bootstrap + channel_bootstrap
+    ):
         bootstrap_by_method.setdefault(
             comparison["method"], []
         ).append(comparison)
