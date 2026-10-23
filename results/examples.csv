@@ -1,0 +1,61 @@
+user_id,user_group,selection_reason,train_programmes,truth_size,table,method_label,rank,tv_show_id,title,category,hit,repeat,distinct_days
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,training_top5,,1,240081,Факты. День.,Инфо,,,26
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,training_top5,,2,2400480,ТСН.,Инфо,,,26
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,training_top5,,3,2400508,Сегодня.,Инфо,,,22
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,training_top5,,4,6500479,'Мир наизнанку'.,Познавательное,,,21
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,training_top5,,5,400335,"'Хата на тата', 6 сезон, 3 эп.",Развлечения,,,16
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,popularity,popularity,1,2400480,ТСН.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,popularity,popularity,2,240081,Факты. День.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,popularity,popularity,3,6500479,'Мир наизнанку'.,Познавательное,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,popularity,popularity,4,10002514,Т/с 'Кухня'.,Сериалы,False,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,popularity,popularity,5,2400508,Сегодня.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,content_tfidf,content_tfidf,1,200477,'Завтрак. Выходной'.,Развлечения,False,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,content_tfidf,content_tfidf,2,400357,"'Холостяк', 10 сезон, 7 эп., 2 ч.",Развлечения,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,content_tfidf,content_tfidf,3,400373,"'Холостяк'. Реалити-шоу, 7 сезон, 4 эп.",Развлечения,False,False,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,content_tfidf,content_tfidf,4,500315,Ток-шоу 'Касается каждого'.,Развлечения,False,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,content_tfidf,content_tfidf,5,6000473,"Половинки, 3 сезон, 3 эп.",Развлечения,False,False,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,mf_k16,mf_k16,1,6500479,'Мир наизнанку'.,Познавательное,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,mf_k16,mf_k16,2,12001682,"М/с 'Губка Боб Квадратные Штаны', 249 с. 'Племянницы Сэнди / Бравые охранники'.",Детям,False,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,mf_k16,mf_k16,3,2500430,'Затерянный мир'.,Познавательное,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,mf_k16,mf_k16,4,240081,Факты. День.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,mf_k16,mf_k16,5,5800509,Реальная мистика.,Развлечения,False,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,hist_pop_w0.30,hist_pop_w0.30,1,2400480,ТСН.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,hist_pop_w0.30,hist_pop_w0.30,2,240081,Факты. День.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,hist_pop_w0.30,hist_pop_w0.30,3,6500479,'Мир наизнанку'.,Познавательное,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,hist_pop_w0.30,hist_pop_w0.30,4,2400508,Сегодня.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,hist_pop_w0.30,hist_pop_w0.30,5,2400467,'Викна-Новости'.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",1,6500479,'Мир наизнанку'.,Познавательное,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",2,240081,Факты. День.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",3,2400480,ТСН.,Инфо,True,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",4,12001682,"М/с 'Губка Боб Квадратные Штаны', 249 с. 'Племянницы Сэнди / Бравые охранники'.",Детям,False,True,
+13571199046623737884,heavy,top decile (threshold 254); selected 634 training programmes; truth size 246,634,246,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",5,2500430,'Затерянный мир'.,Познавательное,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,training_top5,,1,2400508,Сегодня.,Инфо,,,2
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,training_top5,,2,200337,'Утро с 'Интером'.,Развлечения,,,1
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,training_top5,,3,2400480,ТСН.,Инфо,,,1
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,training_top5,,4,5200303,'Следствие вели...' с Леонидом Каневским.,Познавательное,,,1
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,training_top5,,5,6700482,'Секретные материалы'.,Другое,,,1
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,popularity,popularity,1,2400480,ТСН.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,popularity,popularity,2,240081,Факты. День.,Инфо,True,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,popularity,popularity,3,6500479,'Мир наизнанку'.,Познавательное,True,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,popularity,popularity,4,10002514,Т/с 'Кухня'.,Сериалы,True,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,popularity,popularity,5,2400508,Сегодня.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,content_tfidf,content_tfidf,1,2400508,Сегодня.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,content_tfidf,content_tfidf,2,5900256,Утро с Украиной.,Инфо,False,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,content_tfidf,content_tfidf,3,5900276,'Центральное телевидение' с Вадимом Такменёвым.,Инфо,False,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,content_tfidf,content_tfidf,4,5900275,'Утро России'.,Инфо,False,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,content_tfidf,content_tfidf,5,2400467,'Викна-Новости'.,Инфо,True,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,mf_k16,mf_k16,1,2400480,ТСН.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,mf_k16,mf_k16,2,2400508,Сегодня.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,mf_k16,mf_k16,3,5200303,'Следствие вели...' с Леонидом Каневским.,Познавательное,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,mf_k16,mf_k16,4,1100411,'Вещдок. Особый случай. Чужое богатство'.,Познавательное,True,False,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,mf_k16,mf_k16,5,200337,'Утро с 'Интером'.,Развлечения,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,hist_pop_w0.30,hist_pop_w0.30,1,2400508,Сегодня.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,hist_pop_w0.30,hist_pop_w0.30,2,2400480,ТСН.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,hist_pop_w0.30,hist_pop_w0.30,3,6700482,'Секретные материалы'.,Другое,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,hist_pop_w0.30,hist_pop_w0.30,4,5200303,'Следствие вели...' с Леонидом Каневским.,Познавательное,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,hist_pop_w0.30,hist_pop_w0.30,5,200337,'Утро с 'Интером'.,Развлечения,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",1,2400508,Сегодня.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",2,2400480,ТСН.,Инфо,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",3,5200303,'Следствие вели...' с Леонидом Каневским.,Познавательное,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",4,200337,'Утро с 'Интером'.,Развлечения,True,True,
+12453026253397466416,light,bottom decile (threshold 56); selected 5 training programmes (>=3); truth size 95,5,95,final_mf_blend,"final mf_blend (a=0.30, b=0.02, pop=0.68)",5,6700482,'Секретные материалы'.,Другое,True,True,
