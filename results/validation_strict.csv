@@ -1,0 +1,17 @@
+method,map5_strict,map5_old_truth
+popularity,0.41323,0.70235
+history_days,0.49609,0.76963
+mf_k16,0.51346,0.77592
+mf_blend_a0.30_b0.02,0.52844,0.80307
+repeat_t0.30_fit11-20_filla,0.53901,0.73139
+repeat_t0.30_fit11-20_fillb,0.53910,0.73107
+repeat_t0.50_fit11-20_filla,0.52998,0.70107
+repeat_t0.50_fit11-20_fillb,0.53002,0.70075
+repeat_t0.80_fit11-20_filla,0.50995,0.65266
+repeat_t0.80_fit11-20_fillb,0.50989,0.65237
+repeat_t0.30_fit16-20_filla,0.51181,0.69648
+repeat_t0.30_fit16-20_fillb,0.51217,0.69532
+repeat_t0.50_fit16-20_filla,0.49542,0.65782
+repeat_t0.50_fit16-20_fillb,0.49565,0.65698
+repeat_t0.80_fit16-20_filla,0.46673,0.60842
+repeat_t0.80_fit16-20_fillb,0.46810,0.60677
